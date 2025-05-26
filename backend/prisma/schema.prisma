@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(uuid())
+  telegramId      String   @unique
+  fullName        String
+  schoolId        String?
+  school          School?  @relation("UserSchoolRelation", fields: [schoolId], references: [id])
+  tickets         Ticket[]
+  admin           Admin?
+  createdAt       DateTime @default(now())
+  directedSchools School[] @relation("DirectorRelation")
+}
+
+model School {
+  id               String          @id @default(uuid())
+  name             String
+  street           String
+  fullNameDirector String
+  institutionType  InstitutionType
+  directorId       String
+  director         User            @relation("DirectorRelation", fields: [directorId], references: [id])
+  users            User[]          @relation("UserSchoolRelation")
+  tickets          Ticket[]        @relation("SchoolTicketRelation")
+  admins           Admin[]
+}
+
+model Ticket {
+  id        String       @id @default(uuid())
+  name      String
+  content   String
+  imageUrl  String?
+  status    TicketStatus @default(PENDING)
+  type      TicketType   @default(Offer)
+  response  String?
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  schoolId  String
+  school    School       @relation("SchoolTicketRelation", fields: [schoolId], references: [id]) // <== исправлено
+  createdAt DateTime     @default(now())
+}
+
+model Admin {
+  id         String  @id @default(uuid())
+  userId     String  @unique
+  user       User    @relation(fields: [userId], references: [id])
+  schoolId   String
+  school     School  @relation(fields: [schoolId], references: [id])
+  isDirector Boolean @default(false)
+}
+
+model BlackList {
+  id         String   @id @default(uuid())
+  telegramId String   @unique
+  reason     String?
+  createdAt  DateTime @default(now())
+}
+
+enum TicketStatus {
+  PENDING
+  IN_PROGRESS
+  ANSWERED
+  CLOSED
+}
+
+enum TicketType {
+  Complaint
+  Offer
+}
+
+enum InstitutionType {
+  School
+  College
+}
