@@ -1,11 +1,18 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { DirectorGuard } from './admin.guard';
 import { CreateAdminDto } from './dto/create-admin.dto';
+import { AdminGuard } from './admin.guardAdmin';
+import { TicketService } from 'src/ticket/ticket.service';
+import { AuthService } from 'src/auth/auth.service';
 
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly ticketService: TicketService,
+    private readonly authService: AuthService,
+  ) {}
 
   @UseGuards(DirectorGuard)
   @Post()
@@ -16,5 +23,19 @@ export class AdminController {
     const schoolId = (req as any).user.schoolId;
 
     return await this.adminService.create(schoolId, createAdminDto.userIdKey);
+  }
+
+  @UseGuards(AdminGuard)
+  @Get('tickets')
+  async getAllTicketsAdmin(@Req() req: Request) {
+    const schoolId = (req as any).user.schoolId;
+    return await this.ticketService.getAllTicketsBySchoolIdAdmin(schoolId);
+  }
+
+  @UseGuards(AdminGuard)
+  @Get('users')
+  async getAllUsersAdmin(@Req() req: Request) {
+    const schoolId = (req as any).user.schoolId;
+    return await this.authService.getUsersBySchoolIdAdmin(schoolId);
   }
 }

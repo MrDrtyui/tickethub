@@ -86,7 +86,38 @@ export class TicketService {
             },
           },
         },
+        orderBy: {
+          createdAt: 'desc',
+        },
       });
+      return tickets;
+    } catch (e) {
+      throw new Error(e.message);
+    }
+  }
+
+  async getAllTicketsBySchoolIdAdmin(schoolId: string) {
+    try {
+      const tickets = await this.prisma.ticket.findMany({
+        where: {
+          schoolId: schoolId,
+        },
+        include: {
+          user: {
+            select: {
+              fullName: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      if (!tickets) {
+        throw new NotFoundException('No tickets found for this school');
+      }
+
       return tickets;
     } catch (e) {
       throw new Error(e.message);

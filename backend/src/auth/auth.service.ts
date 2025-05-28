@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { validate } from '@telegram-apps/init-data-node';
 import { UserIdByTgIdDto } from './dto/userIdByTgId.dto';
@@ -64,6 +68,13 @@ export class AuthService {
   async validateDirector(initData: string) {
     if (!initData) {
       throw new UnauthorizedException('Mising init data');
+    }
+
+    try {
+      validate(initData, this.botToken);
+    } catch (e) {
+      console.log(e);
+      throw new UnauthorizedException('Invalid init data');
     }
 
     const data = this.parseInitData(initData);
@@ -180,6 +191,29 @@ export class AuthService {
     } catch (e) {
       console.warn(e);
       throw new Error('Not id by telegramId');
+    }
+  }
+
+  async getUsersBySchoolIdAdmin(schoolId: string) {
+    try {
+      const users = await this.prisma.user.findMany({
+        where: { schoolId: schoolId },
+        select: {
+          id: true,
+          fullName: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      if (!users) {
+        throw new NotFoundException('No users found for this school');
+      }
+
+      return users;
+    } catch (e) {
+      throw new Error(e.message);
     }
   }
 
