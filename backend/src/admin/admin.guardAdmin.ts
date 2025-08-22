@@ -22,11 +22,11 @@ export class AdminGuard implements CanActivate {
     let validateUser;
 
     try {
-      const { user } = await this.adminService.validateDirector(initData);
+      const { user } = await this.adminService.validateAdmin(initData);
       validateUser = user;
     } catch (e) {
       console.log(e);
-      throw new UnauthorizedException('Invalid init data dada');
+      throw new UnauthorizedException(e);
     }
 
     (req as any).user = validateUser;

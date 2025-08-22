@@ -17,6 +17,7 @@ import { InitDataGuard } from 'src/auth/init-data.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AdminGuard } from 'src/admin/admin.guardAdmin';
 import { PutTicketAdminDto } from './dto/putTicketAdmin.dto';
+import { TicketStatus } from '@prisma/client';
 
 @Controller('ticket')
 export class TicketController {
@@ -32,19 +33,20 @@ export class TicketController {
   ) {
     console.log(createTicketDto.name);
     const telegramId = (req as any).user.telegramId;
-    createTicketDto.telegramId = telegramId;
     const ticket = await this.ticketService.createTicket(
       createTicketDto,
+      telegramId,
       image,
+      createTicketDto.isAnonymous,
     );
     return ticket;
   }
 
   @UseGuards(InitDataGuard)
   @Get('my-tickets')
-  async getMyTickets(@Req() req: Request) {
+  async getMyTickets(@Req() req: Request, @Param() status?: TicketStatus) {
     const telegramId = (req as any).user.telegramId;
-    const tickets = await this.ticketService.getMyTickets(telegramId);
+    const tickets = await this.ticketService.getMyTickets(telegramId, status);
     return tickets;
   }
 

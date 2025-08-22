@@ -49,9 +49,45 @@ export class AdminService {
 
       const isDirector = user.directedSchools.length > 0;
 
+      if (!isDirector) {
+        throw new UnauthorizedException('You are not a admin');
+      }
+
+      return { user };
+    } catch (e) {
+      throw new UnauthorizedException(e.message);
+    }
+  }
+
+  async validateAdmin(initData: string) {
+    if (!initData) {
+      throw new UnauthorizedException('Mising init data');
+    }
+
+    const data = this.parseInitData(initData);
+    try {
+      const userInfo = {
+        telegramId: String(data.user.id),
+        fullName:
+          `${data.user.first_name ?? ''} ${data.user.last_name ?? ''}`.trim(),
+      };
+
+      console.log(`tgId: ${userInfo.telegramId}`);
+
+      const user = await this.prisma.user.findFirst({
+        where: { telegramId: userInfo.telegramId },
+        include: { directedSchools: true, admin: true },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Start command /start in bot chat');
+      }
+
+      const isDirector = user.directedSchools.length > 0;
+
       const isAdmin = !!user.admin;
 
-      if (!isDirector || !isAdmin) {
+      if (!isDirector && !isAdmin) {
         throw new UnauthorizedException('You are not a admin');
       }
 

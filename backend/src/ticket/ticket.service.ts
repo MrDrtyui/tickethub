@@ -15,7 +15,9 @@ export class TicketService {
 
   async createTicket(
     createTicketDto: CreateTicketDto,
+    telegramId: string,
     image?: Express.Multer.File,
+    isAnonymous = false,
   ) {
     try {
       let imageUrl: string | undefined;
@@ -24,9 +26,7 @@ export class TicketService {
         imageUrl = await this.minio.uploadImage(image);
       }
 
-      const userIdAndSchoolId = await this.auth.getUserByTelegramId(
-        createTicketDto.telegramId,
-      );
+      const userIdAndSchoolId = await this.auth.getUserByTelegramId(telegramId);
 
       const ticket = await this.prisma.ticket.create({
         data: {
@@ -35,7 +35,8 @@ export class TicketService {
           type: TicketType[createTicketDto.type as keyof typeof TicketType],
           userId: userIdAndSchoolId.id,
           schoolId: userIdAndSchoolId.schoolId,
-          imageUrl: imageUrl,
+          isAnonymous,
+          imageUrl,
         },
       });
 
@@ -71,18 +72,20 @@ export class TicketService {
     }
   }
 
-  async getMyTickets(telegramId: string) {
+  async getMyTickets(telegramId: string, status?: TicketStatus) {
     try {
       const tickets = await this.prisma.ticket.findMany({
         where: {
           user: {
             telegramId: telegramId,
           },
+          ...(status ? { status } : {}),
         },
         include: {
           user: {
             select: {
               fullName: true,
+              fio: true,
             },
           },
         },
@@ -96,16 +99,18 @@ export class TicketService {
     }
   }
 
-  async getAllTicketsBySchoolIdAdmin(schoolId: string) {
+  async getAllTicketsBySchoolIdAdmin(schoolId: string, status?: TicketStatus) {
     try {
       const tickets = await this.prisma.ticket.findMany({
         where: {
           schoolId: schoolId,
+          ...(status ? { status } : {}),
         },
         include: {
           user: {
             select: {
               fullName: true,
+              fio: true,
             },
           },
         },
@@ -118,7 +123,10 @@ export class TicketService {
         throw new NotFoundException('No tickets found for this school');
       }
 
-      return tickets;
+      return tickets.map((ticket) => ({
+        ...ticket,
+        user: ticket.isAnonymous ? { fio: 'Аноним' } : ticket.user,
+      }));
     } catch (e) {
       throw new Error(e.message);
     }

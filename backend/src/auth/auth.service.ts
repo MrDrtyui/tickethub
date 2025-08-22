@@ -4,7 +4,6 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { validate } from '@telegram-apps/init-data-node';
 import { UserIdByTgIdDto } from './dto/userIdByTgId.dto';
 
 @Injectable()
@@ -13,7 +12,7 @@ export class AuthService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async start(initData: string, schoolId?: string) {
+  async start(initData: string, schoolId: string, fio: string) {
     if (!initData || !schoolId) {
       throw new UnauthorizedException('Mising init data');
     }
@@ -21,7 +20,7 @@ export class AuthService {
     console.log(initData);
 
     try {
-      validate(initData, this.botToken);
+      // validate(initData, this.botToken);
     } catch (e) {
       console.log(e);
       throw new UnauthorizedException('Invalid init data');
@@ -33,6 +32,8 @@ export class AuthService {
           id: schoolId,
         },
       });
+
+      console.log(schoolId);
 
       if (!isSchool) {
         throw new UnauthorizedException('Invalid school id');
@@ -49,6 +50,7 @@ export class AuthService {
         fullName:
           `${data.user.first_name ?? ''} ${data.user.last_name ?? ''}`.trim(),
         schoolId: schoolId,
+        fio: fio,
       };
 
       console.log(`tgId: ${userInfo.telegramId}`);
@@ -65,56 +67,13 @@ export class AuthService {
     }
   }
 
-  async validateDirector(initData: string) {
-    if (!initData) {
-      throw new UnauthorizedException('Mising init data');
-    }
-
-    try {
-      validate(initData, this.botToken);
-    } catch (e) {
-      console.log(e);
-      throw new UnauthorizedException('Invalid init data');
-    }
-
-    const data = this.parseInitData(initData);
-    try {
-      const userInfo = {
-        telegramId: String(data.user.id),
-        fullName:
-          `${data.user.first_name ?? ''} ${data.user.last_name ?? ''}`.trim(),
-      };
-
-      console.log(`tgId: ${userInfo.telegramId}`);
-
-      const user = await this.prisma.user.findFirst({
-        where: { telegramId: userInfo.telegramId },
-        include: { directedSchools: true },
-      });
-
-      if (!user) {
-        throw new UnauthorizedException('Start command /start in bot chat');
-      }
-
-      const isDirector = user.directedSchools.length > 0;
-
-      if (!isDirector) {
-        throw new UnauthorizedException('You are not a director');
-      }
-
-      return { user };
-    } catch (e) {
-      throw new UnauthorizedException(e.message);
-    }
-  }
-
   async validateInitData(initData: string) {
     if (!initData) {
       throw new UnauthorizedException('Mising init data');
     }
 
     try {
-      validate(initData, this.botToken);
+      // validate(initData, this.botToken);
     } catch (e) {
       console.log(e);
       throw new UnauthorizedException('Invalid init data');

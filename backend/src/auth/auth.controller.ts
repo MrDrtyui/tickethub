@@ -10,7 +10,11 @@ export class AuthController {
 
   @Post('start')
   async login(@Body('') startDto: StartDto) {
-    return this.authService.start(startDto.initData, startDto.schoolId);
+    return this.authService.start(
+      startDto.initData,
+      startDto.schoolId,
+      startDto.fio,
+    );
   }
 
   @UseGuards(InitDataGuard)

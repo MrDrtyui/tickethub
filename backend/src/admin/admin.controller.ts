@@ -1,10 +1,19 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { DirectorGuard } from './admin.guard';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { AdminGuard } from './admin.guardAdmin';
 import { TicketService } from 'src/ticket/ticket.service';
 import { AuthService } from 'src/auth/auth.service';
+import { TicketStatus } from '@prisma/client';
 
 @Controller('admin')
 export class AdminController {
@@ -27,9 +36,15 @@ export class AdminController {
 
   @UseGuards(AdminGuard)
   @Get('tickets')
-  async getAllTicketsAdmin(@Req() req: Request) {
+  async getAllTicketsAdmin(
+    @Req() req: Request,
+    @Param() status?: TicketStatus,
+  ) {
     const schoolId = (req as any).user.schoolId;
-    return await this.ticketService.getAllTicketsBySchoolIdAdmin(schoolId);
+    return await this.ticketService.getAllTicketsBySchoolIdAdmin(
+      schoolId,
+      status,
+    );
   }
 
   @UseGuards(AdminGuard)

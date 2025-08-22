@@ -4,11 +4,11 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AuthService } from 'src/auth/auth.service';
+import { AdminService } from './admin.service';
 
 @Injectable()
 export class DirectorGuard implements CanActivate {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly adminService: AdminService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
@@ -22,11 +22,11 @@ export class DirectorGuard implements CanActivate {
     let validateUser;
 
     try {
-      const { user } = await this.authService.validateDirector(initData);
+      const { user } = await this.adminService.validateDirector(initData);
       validateUser = user;
     } catch (e) {
       console.log(e);
-      throw new UnauthorizedException('Invalid init data dada');
+      throw new UnauthorizedException(e);
     }
 
     (req as any).user = validateUser;

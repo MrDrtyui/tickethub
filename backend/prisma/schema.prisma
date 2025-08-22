@@ -11,6 +11,7 @@ model User {
   id              String   @id @default(uuid())
   telegramId      String   @unique
   fullName        String
+  fio             String
   schoolId        String?
   school          School?  @relation("UserSchoolRelation", fields: [schoolId], references: [id])
   tickets         Ticket[]
@@ -40,6 +41,7 @@ model Ticket {
   status    TicketStatus @default(PENDING)
   type      TicketType   @default(Offer)
   response  String?
+  isAnonymous Boolean    @default(false)
   userId    String
   user      User         @relation(fields: [userId], references: [id])
   schoolId  String
@@ -66,7 +68,6 @@ model BlackList {
 enum TicketStatus {
   PENDING
   IN_PROGRESS
-  ANSWERED
   CLOSED
 }
 
