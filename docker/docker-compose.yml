@@ -60,5 +60,13 @@ services:
     restart: always
     mem_limit: 512m
 
+  frontend-kit-edu:
+    build:
+      context: ../kitaitu-frontend
+      dockerfile: Dockerfile
+    image: frontend-kit-edu
+    container_name: kit-edu-frontend
+    restart: unless-stopped
+
 volumes:
   postgres-data-1:
