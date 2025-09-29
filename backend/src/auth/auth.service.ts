@@ -1,26 +1,40 @@
 import {
+  BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserIdByTgIdDto } from './dto/userIdByTgId.dto';
+import { User } from '@prisma/client';
+import { JwtService } from '@nestjs/jwt';
+import { v4 as uuidv4 } from 'uuid';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
   private readonly botToken = process.env.TELEGRAM_BOT_TOKEN!;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+  ) {}
 
-  async start(initData: string, schoolId: string, fio: string) {
-    if (!initData || !schoolId) {
-      throw new UnauthorizedException('Mising init data');
+  async start(
+    initData: string,
+    schoolId: string,
+    fio: string,
+    password: string,
+    login: string,
+  ) {
+    if (!initData || !schoolId || !password) {
+      throw new BadRequestException();
     }
 
     console.log(initData);
 
     try {
-      // validate(initData, this.botToken);
     } catch (e) {
       console.log(e);
       throw new UnauthorizedException('Invalid init data');
@@ -51,6 +65,101 @@ export class AuthService {
           `${data.user.first_name ?? ''} ${data.user.last_name ?? ''}`.trim(),
         schoolId: schoolId,
         fio: fio,
+        password: password,
+        login: login,
+      };
+
+      console.log(`tgId: ${userInfo.telegramId}`);
+
+      const passOk = await bcrypt.hash(password, 10);
+      const user = await this.prisma.user.upsert({
+        where: { telegramId: userInfo.telegramId },
+        update: {},
+        create: {
+          telegramId: userInfo.telegramId,
+          fullName: userInfo.fullName,
+          fio: userInfo.fio,
+          password: passOk,
+          login: userInfo.login,
+          school: schoolId ? { connect: { id: schoolId } } : undefined,
+        },
+      });
+
+      return { user };
+    } catch (e) {
+      throw new UnauthorizedException(e.message);
+    }
+  }
+
+  async login(login: string, password: string) {
+    if (!login || !password) {
+      throw new BadRequestException('Login and password required');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { login },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const passwordOk = await bcrypt.compare(password, user.password);
+    if (!passwordOk) {
+      throw new UnauthorizedException('Invalid password');
+    }
+
+    const payload = { sub: user.id, telegramId: user.telegramId };
+    const access_token = this.jwtService.sign(payload);
+
+    return {
+      access_token,
+      user,
+    };
+  }
+
+  async startaitu(
+    schoolId: string,
+    fio: string,
+    password: string,
+    login: string,
+  ) {
+    if (!schoolId || !password) {
+      throw new BadRequestException();
+    }
+
+    try {
+    } catch (e) {
+      console.log(e);
+      throw new UnauthorizedException('Invalid init data');
+    }
+
+    try {
+      const isSchool = await this.prisma.school.findFirst({
+        where: {
+          id: schoolId,
+        },
+      });
+
+      console.log(schoolId);
+
+      if (!isSchool) {
+        throw new UnauthorizedException('Invalid school id');
+      }
+    } catch (e) {
+      console.log(e);
+      throw new Error(e.message);
+    }
+
+    try {
+      const passwordHash = await bcrypt.hash(password, 10);
+      const userInfo = {
+        telegramId: uuidv4(),
+        fullName: 'aitu client',
+        schoolId: schoolId,
+        fio: fio,
+        password: passwordHash,
+        login: login,
       };
 
       console.log(`tgId: ${userInfo.telegramId}`);
@@ -58,10 +167,18 @@ export class AuthService {
       const user = await this.prisma.user.upsert({
         where: { telegramId: userInfo.telegramId },
         update: {},
-        create: userInfo,
+        create: {
+          telegramId: userInfo.telegramId,
+          fullName: userInfo.fullName,
+          fio: userInfo.fio,
+          password: userInfo.password,
+          login: userInfo.login,
+          school: schoolId ? { connect: { id: schoolId } } : undefined,
+        },
       });
-
-      return { user };
+      const payload = { sub: user.id, telegramId: user.telegramId };
+      const access_token = this.jwtService.sign(payload);
+      return { access_token, user };
     } catch (e) {
       throw new UnauthorizedException(e.message);
     }
@@ -73,7 +190,6 @@ export class AuthService {
     }
 
     try {
-      // validate(initData, this.botToken);
     } catch (e) {
       console.log(e);
       throw new UnauthorizedException('Invalid init data');
@@ -105,19 +221,59 @@ export class AuthService {
 
   async checkSchoolUser(telegramId: string) {
     try {
-      const isSchoolId = await this.prisma.user.findUnique({
-        where: { telegramId: telegramId },
-        select: { schoolId: true },
+      const user = await this.prisma.user.findUnique({
+        where: { telegramId },
+        include: {
+          admin: true,
+          directedSchools: true,
+        },
       });
 
-      if (!isSchoolId) {
-        return false;
+      if (!user) return null;
+
+      let role: 'user' | 'admin' | 'director' | 'owner' = 'user';
+
+      if (user.owner) {
+        role = 'owner';
+      } else if (
+        (user.admin && user.admin.isDirector) ||
+        user.directedSchools.length > 0
+      ) {
+        role = 'director';
+      } else if (user.admin) {
+        role = 'admin';
+      } else {
+        role = 'user';
       }
 
-      return { isId: true, schoolId: isSchoolId.schoolId };
+      return {
+        ...user,
+        role,
+      };
     } catch (e) {
       console.warn(e);
       return { isId: false, schoolId: null };
+    }
+  }
+
+  async generateJwt(user: User) {
+    return this.jwtService.sign({
+      sub: user.id,
+      telegramId: user.telegramId,
+    });
+  }
+
+  async getMySchool(telegramId: string) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { telegramId },
+        select: {
+          school: true,
+        },
+      });
+      return user;
+    } catch (e) {
+      throw new InternalServerErrorException(e.message);
     }
   }
 

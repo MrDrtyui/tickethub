@@ -11,6 +11,8 @@ model User {
   id              String   @id @default(uuid())
   telegramId      String   @unique
   fullName        String
+  login           String   @unique
+  password        String
   fio             String
   schoolId        String?
   school          School?  @relation("UserSchoolRelation", fields: [schoolId], references: [id])
@@ -18,6 +20,7 @@ model User {
   admin           Admin?
   createdAt       DateTime @default(now())
   directedSchools School[] @relation("DirectorRelation")
+  owner           Boolean  @default(false)
 }
 
 model School {
@@ -34,19 +37,22 @@ model School {
 }
 
 model Ticket {
-  id        String       @id @default(uuid())
-  name      String
-  content   String
-  imageUrl  String?
-  status    TicketStatus @default(PENDING)
-  type      TicketType   @default(Offer)
-  response  String?
-  isAnonymous Boolean    @default(false)
-  userId    String
-  user      User         @relation(fields: [userId], references: [id])
-  schoolId  String
-  school    School       @relation("SchoolTicketRelation", fields: [schoolId], references: [id]) // <== исправлено
-  createdAt DateTime     @default(now())
+  id           String       @id @default(uuid())
+  name         String
+  content      String
+  imageUrl     String?
+  status       TicketStatus @default(PENDING)
+  type         TicketType   @default(Complaint)
+  response     String?
+  ai_response  String?
+  ai_status    AiStatus?
+  ai_prioritet AiPrioritet?
+  isAnonymous  Boolean      @default(false)
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
+  schoolId     String
+  school       School       @relation("SchoolTicketRelation", fields: [schoolId], references: [id])
+  createdAt    DateTime     @default(now())
 }
 
 model Admin {
@@ -65,6 +71,18 @@ model BlackList {
   createdAt  DateTime @default(now())
 }
 
+enum AiStatus {
+  USEFUL
+  NOT_USEFUL
+  SPAM
+}
+
+enum AiPrioritet {
+  low
+  medium
+  critical
+}
+
 enum TicketStatus {
   PENDING
   IN_PROGRESS
@@ -73,10 +91,18 @@ enum TicketStatus {
 
 enum TicketType {
   Complaint
-  Offer
+  Technical
+  Maintenance
+  Schedule
+  Event
+  Discipline
+  Suggestion
+  Other
 }
 
 enum InstitutionType {
   School
   College
+  University
+  Sadik
 }

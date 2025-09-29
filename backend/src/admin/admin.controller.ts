@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -48,9 +49,25 @@ export class AdminController {
   }
 
   @UseGuards(AdminGuard)
-  @Get('users')
+  @Get('admin')
   async getAllUsersAdmin(@Req() req: Request) {
     const schoolId = (req as any).user.schoolId;
-    return await this.authService.getUsersBySchoolIdAdmin(schoolId);
+    try {
+      return this.adminService.getAdmins(schoolId);
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  @UseGuards(DirectorGuard)
+  @Delete()
+  async deleteAdmin(@Req() req: Request, @Body() body: { userIdKey: string }) {
+    try {
+      const admin = await this.adminService.deleteAdmin(body.userIdKey);
+
+      return admin;
+    } catch (e) {
+      throw e;
+    }
   }
 }

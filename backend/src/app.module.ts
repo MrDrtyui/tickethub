@@ -7,9 +7,10 @@ import { SchoolModule } from './school/school.module';
 import { TicketModule } from './ticket/ticket.module';
 import { MinioService } from './minio/minio.service';
 import { AdminModule } from './admin/admin.module';
+import { OwnerModule } from './owner/owner.module';
 
 @Module({
-  imports: [AuthModule, SchoolModule, TicketModule, AdminModule],
+  imports: [AuthModule, SchoolModule, TicketModule, AdminModule, OwnerModule],
   controllers: [AppController],
   providers: [AppService, PrismaService, MinioService],
 })

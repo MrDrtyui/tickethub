@@ -1,9 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateTicketDto } from './dto/createTicket.dto';
 import { AuthService } from 'src/auth/auth.service';
 import { MinioService } from 'src/minio/minio.service';
-import { TicketStatus, TicketType } from '@prisma/client';
+import {
+  AiPrioritet,
+  AiStatus,
+  TicketStatus,
+  TicketType,
+} from '@prisma/client';
 
 @Injectable()
 export class TicketService {
@@ -47,6 +56,46 @@ export class TicketService {
       return ticket;
     } catch (e) {
       throw new Error(e.message);
+    }
+  }
+
+  async getTicketForAi() {
+    try {
+      const ticket = await this.prisma.ticket.findFirst({
+        where: {
+          ai_response: null,
+          status: TicketStatus.PENDING,
+        },
+      });
+
+      return ticket;
+    } catch (e) {
+      throw new InternalServerErrorException(e.message);
+    }
+  }
+
+  async putTicketAi(
+    ticketId: string,
+    ai_response: string,
+    ai_status: AiStatus,
+    ai_prioritet: AiPrioritet,
+  ) {
+    try {
+      const ticket = await this.prisma.ticket.update({
+        where: {
+          id: ticketId,
+        },
+        data: {
+          ai_response,
+          ai_status,
+          ai_prioritet,
+        },
+      });
+
+      return ticket;
+    } catch (e) {
+      console.log(e);
+      throw new InternalServerErrorException(e.message);
     }
   }
 

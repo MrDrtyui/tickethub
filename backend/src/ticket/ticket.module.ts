@@ -6,16 +6,18 @@ import { AuthService } from 'src/auth/auth.service';
 import { MinioService } from 'src/minio/minio.service';
 import { AdminGuard } from 'src/admin/admin.guardAdmin';
 import { AdminService } from 'src/admin/admin.service';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
+  imports: [AuthModule],
   controllers: [TicketController],
   providers: [
     TicketService,
     PrismaService,
-    AuthService,
     MinioService,
     AdminGuard,
     AdminService,
   ],
+  exports: [TicketService],
 })
 export class TicketModule {}

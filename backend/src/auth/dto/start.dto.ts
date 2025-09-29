@@ -1,5 +1,7 @@
 export class StartDto {
-  initData: string;
+  initData?: string;
   schoolId: string;
   fio: string;
+  password: string;
+  login: string;
 }

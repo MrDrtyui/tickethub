@@ -3,13 +3,14 @@ import {
   ExecutionContext,
   Injectable,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AdminService } from './admin.service';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
-export class AdminGuard implements CanActivate {
+export class OwnerGuard implements CanActivate {
   constructor(
     private readonly adminService: AdminService,
     private readonly jwtService: JwtService,
@@ -17,13 +18,15 @@ export class AdminGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
-
     const initData = req.headers['x-initdata'] as string | undefined;
     const authHeader = req.headers['authorization'];
 
     try {
       if (initData) {
-        const { user } = await this.adminService.validateAdmin(initData);
+        const { user } = await this.adminService.validateOwner(initData);
+        if (!user.owner) {
+          throw new ForbiddenException('User is not an owner');
+        }
         (req as any).user = user;
         return true;
       }
@@ -36,9 +39,13 @@ export class AdminGuard implements CanActivate {
           throw new UnauthorizedException('Token missing telegramId');
         }
 
-        const user = await this.adminService.findAndValidateAdminByTelegramId(
+        const user = await this.adminService.findAndValidateOwnerByTelegramId(
           payload.telegramId,
         );
+
+        if (!user.owner) {
+          throw new ForbiddenException('User is not an owner');
+        }
 
         (req as any).user = user;
         return true;
@@ -46,7 +53,13 @@ export class AdminGuard implements CanActivate {
 
       throw new UnauthorizedException('Missing initData or JWT token');
     } catch (e) {
-      throw new UnauthorizedException(e.message || e);
+      if (
+        e instanceof UnauthorizedException ||
+        e instanceof ForbiddenException
+      ) {
+        throw e;
+      }
+      throw new UnauthorizedException(e.message || 'Invalid credentials');
     }
   }
 }

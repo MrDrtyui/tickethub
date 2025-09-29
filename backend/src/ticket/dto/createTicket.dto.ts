@@ -1,11 +1,5 @@
 import { TicketType } from '@prisma/client';
-import {
-  IsBoolean,
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateTicketDto {
   @IsString()
@@ -20,6 +14,6 @@ export class CreateTicketDto {
   type: string;
 
   @IsOptional()
-  @IsBoolean()
-  isAnonymous?: boolean;
+  @IsString()
+  isAnonymous?: string;
 }

@@ -37,7 +37,7 @@ export class TicketController {
       createTicketDto,
       telegramId,
       image,
-      createTicketDto.isAnonymous,
+      createTicketDto.isAnonymous === 'true',
     );
     return ticket;
   }

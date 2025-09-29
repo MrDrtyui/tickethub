@@ -4,33 +4,44 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { AdminService } from './admin.service';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class DirectorGuard implements CanActivate {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
 
-    const initData = req.headers['x-initdata'] as string;
+    const initData = req.headers['x-initdata'] as string | undefined;
+    const authHeader = req.headers['authorization'];
 
-    if (!initData) {
-      throw new UnauthorizedException('Missing initData danil loh');
+    if (initData) {
+      try {
+        const { user } = await this.adminService.validateDirector(initData);
+        (req as any).user = user;
+        return true;
+      } catch (e) {
+        throw new UnauthorizedException(e);
+      }
     }
 
-    let validateUser;
-
-    try {
-      const { user } = await this.adminService.validateDirector(initData);
-      validateUser = user;
-    } catch (e) {
-      console.log(e);
-      throw new UnauthorizedException(e);
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const payload = await this.jwtService.verifyAsync(token);
+        (req as any).user = payload;
+        return true;
+      } catch {
+        throw new UnauthorizedException('Invalid or expired token');
+      }
     }
 
-    (req as any).user = validateUser;
-
-    return true;
+    throw new UnauthorizedException('Missing initData or JWT token');
   }
 }

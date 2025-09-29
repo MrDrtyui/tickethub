@@ -10,10 +10,34 @@ export class AuthController {
 
   @Post('start')
   async login(@Body('') startDto: StartDto) {
+    console.log(startDto);
     return this.authService.start(
       startDto.initData,
       startDto.schoolId,
       startDto.fio,
+      startDto.password,
+      startDto.login,
+    );
+  }
+
+  @Get('login')
+  async loginAitu(@Body('') body: { login: string; password: string }) {
+    try {
+      const user = this.authService.login(body.login, body.password);
+      return user;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  @Post('startaitu')
+  async startAutu(@Body('') startDto: StartDto) {
+    console.log(startDto);
+    return this.authService.startaitu(
+      startDto.schoolId,
+      startDto.fio,
+      startDto.password,
+      startDto.login,
     );
   }
 
@@ -29,5 +53,12 @@ export class AuthController {
   async checkSchoolIdByUser(@Req() req: Request) {
     const telegramId = (req as any).user.telegramId;
     return this.authService.checkSchoolUser(telegramId);
+  }
+
+  @UseGuards(InitDataGuard)
+  @Get('myschool')
+  async mySchool(@Req() req: Request) {
+    const telegramId = (req as any).user.telegramId;
+    return this.authService.getMySchool(telegramId);
   }
 }
